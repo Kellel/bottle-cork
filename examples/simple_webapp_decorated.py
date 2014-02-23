@@ -22,6 +22,7 @@ aaa = Cork('example_conf', email_sender='federico.ceratto@gmail.com', smtp_url='
 
 # alias the authorization decorator with defaults
 authorize = aaa.make_auth_decorator(fail_redirect="/login", role="user")
+bypass_authorize = aaa.make_localbypass_auth_decorator(fail_redirect="/login", role="user", bypassed_addrs = ['127.0.0.0/8', '192.168.1.0/24'])
 
 import datetime
 app = bottle.app()
@@ -111,6 +112,13 @@ def index():
     #aaa.require(fail_redirect='/login')
     return 'Welcome! <a href="/admin">Admin page</a> <a href="/logout">Logout</a>'
 
+@bottle.route('/local')
+@bypass_authorize()
+def index():
+    """Only authenticated users can see this"""
+    #session = bottle.request.environ.get('beaker.session')
+    #aaa.require(fail_redirect='/login')
+    return 'Welcome From a local client! <a href="/admin">Admin page</a> <a href="/logout">Logout</a>'
 
 # Resources used by tests designed to test decorators specifically
 

@@ -26,6 +26,7 @@ from logging import getLogger
 from smtplib import SMTP, SMTP_SSL
 from threading import Thread
 from time import time
+from netaddr import IPAddress, IPNetwork
 import bottle
 import os
 import re
@@ -536,6 +537,35 @@ class Cork(object):
                 import functools
                 @functools.wraps(func)
                 def wrapper(*a, **ka):
+                    session_manager.require(username=username, role=role, fixed_role=fixed_role,
+                        fail_redirect=fail_redirect)
+                    return func(*a, **ka)
+                return wrapper
+            return decorator
+        return(auth_require)
+
+    def make_localbypass_auth_decorator(self, username=None, role=None, fixed_role=False, fail_redirect='/login', bypassed_addrs = ['127.0.0.0/8']):
+        '''
+        Create a decorator to be used for authentication and authorization
+
+        :param username: A resource can be protected for a specific user
+        :param role: Minimum role level required for authorization
+        :param fixed_role: Only this role gets authorized
+        :param fail_redirect: The URL to redirect to if a login is required.
+        '''
+        session_manager = self
+        local_addrs = [IPNetwork(x) for x in bypassed_addrs]
+        def auth_require(username=username, role=role, fixed_role=fixed_role,
+                         fail_redirect=fail_redirect):
+            def decorator(func):
+                import functools
+                @functools.wraps(func)
+                def wrapper(*a, **ka):
+                    ip = IPAddress(bottle.request.remote_addr)
+                    for network in local_addrs:
+                        if ip in network:
+                            return func(*a, **ka)
+
                     session_manager.require(username=username, role=role, fixed_role=fixed_role,
                         fail_redirect=fail_redirect)
                     return func(*a, **ka)
